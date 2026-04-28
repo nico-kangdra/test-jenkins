@@ -1,0 +1,36 @@
+pipeline:
+  agent:
+    node:
+      label: "docker"
+
+  environment:
+    APP_NAME: "test"
+
+  stages:
+    - stage: "Checkout"
+      steps:
+        - checkout scm
+    
+    - stage: "Test Run"
+      steps:
+        - script: |
+            echo "Running tests..."
+            echo "Current date: $(date)"
+            echo "Workspace files:"
+            ls -la
+            echo "Environment variables:"
+            echo "APP_NAME = $APP_NAME"
+
+    - stage: "Run Docker Container"
+      steps:
+        - script: |
+            echo "Running Docker container..."
+            docker run -d debian:latest sleep infinity
+
+    // - stage: "Build and Push Docker Image"
+    //   steps:
+    //     - script: |
+    //         echo "Building Docker image..."
+    //         docker build -t myapp:${env.BUILD_NUMBER} .
+    //         echo "Pushing Docker image to registry..."
+    //         docker push myapp:${env.BUILD_NUMBER}
