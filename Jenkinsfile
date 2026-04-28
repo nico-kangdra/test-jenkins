@@ -1,6 +1,3 @@
-@Grab(group='org.yaml', module='snakeyaml', version='2.0')
-import org.yaml.snakeyaml.Yaml
-
 pipeline {
     agent {label 'docker'}
     
@@ -15,10 +12,7 @@ pipeline {
             steps {
                 script {
                     try {
-                        def yamlContent = readFile(file: 'pipeline.yaml')
-                        def yaml = new Yaml()
-                        def config = yaml.load(yamlContent)
-                        
+                        def config = readYaml file: 'pipeline.yaml'
                         env.PIPELINE_CONFIG = groovy.json.JsonOutput.toJson(config)
                         echo "✓ Pipeline config loaded successfully"
                         echo "Stages: ${config.stages.collect { it.name }.join(', ')}"
@@ -32,9 +26,7 @@ pipeline {
         stage('Execute Pipeline Stages') {
             steps {
                 script {
-                    def yamlContent = readFile(file: 'pipeline.yaml')
-                    def yaml = new Yaml()
-                    def config = yaml.load(yamlContent)
+                    def config = readYaml file: 'pipeline.yaml'
                     
                     config.stages.each { stageDef ->
                         executePipelineStage(stageDef)
