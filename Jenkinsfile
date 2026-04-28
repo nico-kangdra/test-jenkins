@@ -57,7 +57,7 @@ void executePipelineStage(Map stageDef) {
             retry(stageDef.retry ?: 0) {
                 echo "\n═══════════════════════════════════════════"
                 echo "Stage: ${stageDef.name}"
-                echo "Image: ${stageDef.image}"
+                echo "Running natively on agent"
                 echo "═══════════════════════════════════════════\n"
                 
                 // Check if stage should be skipped
@@ -66,32 +66,24 @@ void executePipelineStage(Map stageDef) {
                     return
                 }
                 
-                // Auto-mount docker socket if when.build=true
-                def dockerArgs = stageDef.dockerArgs ?: ''
-                if (stageDef.when?.build) {
-                    dockerArgs = '-v /var/run/docker.sock:/var/run/docker.sock'
-                    echo "✓ Docker socket mounted (when.build=true)"
-                }
-                
-                docker.image(stageDef.image).inside(dockerArgs) {
-                    // Setup environment variables
-                    def envList = []
-                    if (stageDef.env) {
-                        stageDef.env.each { envEntry ->
-                            if (envEntry instanceof String) {
-                                envList.add(envEntry)
-                            } else if (envEntry instanceof Map) {
-                                envEntry.each { k, v -> envList.add("${k}=${v}") }
-                            }
+                // Setup environment variables
+                def envList = []
+                if (stageDef.env) {
+                    stageDef.env.each { envEntry ->
+                        if (envEntry instanceof String) {
+                            envList.add(envEntry)
+                        } else if (envEntry instanceof Map) {
+                            envEntry.each { k, v -> envList.add("${k}=${v}") }
                         }
                     }
-                    
-                    withEnv(envList) {
-                        sh """
-                            set -e
-                            ${stageDef.command}
-                        """
-                    }
+                }
+                
+                // Run natively on agent (without Docker container)
+                withEnv(envList) {
+                    sh """
+                        set -e
+                        ${stageDef.command}
+                    """
                 }
                 echo "✓ ${stageDef.name} completed successfully\n"
             }
