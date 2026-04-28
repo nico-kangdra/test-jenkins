@@ -1,0 +1,26 @@
+# Simple Pipeline Example
+# File: pipeline-simple-example.yaml
+# Usage: Ganti pipeline.yaml dengan ini untuk testing sederhana
+
+stages:
+  - name: "Hello World"
+    image: "alpine:latest"
+    command: |
+      echo "Hello from pipeline!"
+      echo "Current date: $(date)"
+      
+  - name: "List Files"
+    image: "alpine:latest"
+    command: |
+      echo "Workspace files:"
+      ls -la
+      
+  - name: "Echo Environment"
+    image: "alpine:latest"
+    env:
+      - "MY_VAR=Hello"
+      - "BUILD_ENV=testing"
+    command: |
+      echo "MY_VAR = $MY_VAR"
+      echo "BUILD_ENV = $BUILD_ENV"
+      echo "BUILD_NUMBER = $BUILD_NUMBER"

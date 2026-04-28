@@ -1,0 +1,34 @@
+stages:
+  - name: "Build App"
+    image: "golang:1.22-alpine"
+    env:
+      - "GOOS=linux"
+      - "CGO_ENABLED=0"
+    command: |
+      echo "Building Go application..."
+      go mod download
+      go build -o my-app main.go
+      ls -lh my-app
+      
+  - name: "Run Tests"
+    image: "golang:1.22-alpine"
+    env:
+      - "GOOS=linux"
+    command: |
+      echo "Running Go tests..."
+      go test -v ./...
+
+  - name: "Docker Build"
+    image: "docker:24-dind"
+    timeout: 30
+    retry: 0
+    allowFailure: false
+    when:
+      build: true
+    command: |
+      echo "Building Docker image..."
+      docker build -t my-app:${BUILD_NUMBER} .
+      docker tag my-app:${BUILD_NUMBER} my-app:latest
+      echo "Docker build completed"
+      # Uncomment untuk push ke registry:
+      # docker push my-app:${BUILD_NUMBER}
