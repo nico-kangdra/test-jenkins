@@ -57,8 +57,6 @@ void executePipelineStage(Map stageDef) {
             retry(stageDef.retry ?: 0) {
                 echo "\n═══════════════════════════════════════════"
                 echo "Stage: ${stageDef.name}"
-                echo "Running natively on agent"
-                echo "═══════════════════════════════════════════\n"
                 
                 // Check if stage should be skipped
                 if (stageDef.when && !evaluateWhen(stageDef.when)) {
