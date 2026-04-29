@@ -2,25 +2,26 @@ pipeline:
   agent: any
 
   environment:
-    APP_NAME: "test"
+    APP_NAME: "go-app"
+    DOCKER_PREFIX: "nkangdra"
+    FULL_IMAGE: "$DOCKER_PREFIX/$APP_NAME:v$BUILD_NUMBER"
 
   stages:
-    - stage: "Test Run"
+    - stage: "Docker Build and Push"
       steps:
-        script: |
-          sh '''
-            echo "Running tests..."
-            echo "Current date: $(date)"
-            echo "Workspace files:"
-            ls -la
-            echo "Environment variables:"
-            echo "APP_NAME = $APP_NAME"
-          '''
+        script:
+          - withCredentials: "[usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]"
+            script: |
+              sh '''
+                echo $PASSWORD | docker login -u $USERNAME --password-stdin
+                docker build -t $FULL_IMAGE .
+                docker push $FULL_IMAGE
+              '''
 
-    - stage: "Run Docker Container"
+    - stage: "Docker Deploy"
       steps:
         script: |
           sh '''
-            echo "Running Docker container..."
-            docker run -d debian:latest sleep infinity
+            docker run -d -p 8081:8080 $FULL_IMAGE
+            echo "DONE !!!"
           '''
