@@ -2,7 +2,7 @@ pipeline:
   agent: any
 
   parameters:
-    - "gitParameter(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Select the branch to build from', type: 'PT_BRANCH')"
+    - "gitParameter(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Select the branch to build from', type: 'PT_BRANCH', branchFilter: '.*', sortMode: 'DESCENDING_SMART')"
 
   environment:
     GIT_REPO: "https://github.com/nico-kangdra/test-jenkins.git"
