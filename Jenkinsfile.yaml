@@ -6,6 +6,10 @@ pipeline:
     DOCKER_PREFIX: "nkangdra"
 
   stages:
+    - stage: "Checkout"
+      steps:
+        checkout scm
+
     - stage: "Docker Build and Push"
       steps:
         script:
