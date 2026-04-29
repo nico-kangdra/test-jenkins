@@ -12,6 +12,8 @@ pipeline:
           - withCredentials: "[usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]"
             script: |
               sh '''
+                ls -a
+                pwd
                 export FULL_IMAGE="$DOCKER_PREFIX/$APP_NAME:v$BUILD_NUMBER"
                 echo $PASSWORD | docker login -u $USERNAME --password-stdin
                 docker build -t $FULL_IMAGE .
