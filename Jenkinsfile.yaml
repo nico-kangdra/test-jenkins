@@ -4,7 +4,6 @@ pipeline:
   environment:
     APP_NAME: "go-app"
     DOCKER_PREFIX: "nkangdra"
-    FULL_IMAGE: "$DOCKER_PREFIX/$APP_NAME:v$BUILD_NUMBER"
 
   stages:
     - stage: "Docker Build and Push"
@@ -13,6 +12,7 @@ pipeline:
           - withCredentials: "[usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]"
             script: |
               sh '''
+                export FULL_IMAGE="$DOCKER_PREFIX/$APP_NAME:v$BUILD_NUMBER"
                 echo $PASSWORD | docker login -u $USERNAME --password-stdin
                 docker build -t $FULL_IMAGE .
                 docker push $FULL_IMAGE
