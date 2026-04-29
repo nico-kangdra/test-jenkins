@@ -37,6 +37,14 @@ pipeline:
       steps:
         script: |
           sh '''
-            docker run -d -p 8081:8080 $FULL_IMAGE
+            docker run -d -p 8081:8080 --name $APP_NAME $FULL_IMAGE
             echo "DONE !!!"
           '''
+
+  post:
+    always: 
+      script: |
+        sh '''
+          sleep 10
+          docker rm -f $APP_NAME
+        '''
