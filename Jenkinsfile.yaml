@@ -21,9 +21,9 @@ pipeline:
                   ])
           env.BRANCH_NAME = "${params.BRANCH_NAME}"
           env.FULL_IMAGE = "${DOCKER_PREFIX}/${APP_NAME}:v${BUILD_NUMBER}"
-          env.GIT_COMMIT_ID = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+          env.GIT_COMMIT_ID = sh(script: 'git rev-parse --short=7 HEAD', returnStdout: true).trim()
           currentBuild.displayName = "#${BUILD_NUMBER} - ${env.BRANCH_NAME}"
-          currentBuild.description = "BRANCH: ${env.BRANCH_NAME}\nCOMMIT: ${env.GIT_COMMIT_ID}"
+          currentBuild.description = "COMMIT: ${env.GIT_COMMIT_ID}"
 
     - stage: "Docker Build and Push"
       steps:
