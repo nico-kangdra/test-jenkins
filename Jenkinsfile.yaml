@@ -1,14 +1,21 @@
 pipeline:
   agent: any
 
+  parameters:
+    - "gitParameter(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Select the branch to build from', type: 'PT_BRANCH')"
+
   environment:
+    GIT_REPO: "https://github.com/nico-kangdra/test-jenkins.git"
     APP_NAME: "go-app"
     DOCKER_PREFIX: "nkangdra"
 
   stages:
-    - stage: "Checkout"
+    - stage: "PreRequisites"
       steps:
-        checkout scm
+        script: |
+          env.BRANCH_NAME = "${params.BRANCH_NAME}"
+          env.FULL_IMAGE = "${DOCKER_PREFIX}/${APP_NAME}:v${BUILD_NUMBER}"
+          checkout([$class: 'GitSCM', branches: [[name: ${BRANCH_NAME}]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: ${GIT_REPO}]]])
 
     - stage: "Docker Build and Push"
       steps:
@@ -16,9 +23,6 @@ pipeline:
           - withCredentials: "[usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]"
             script: |
               sh '''
-                ls -a
-                pwd
-                export FULL_IMAGE="$DOCKER_PREFIX/$APP_NAME:v$BUILD_NUMBER"
                 echo $PASSWORD | docker login -u $USERNAME --password-stdin
                 docker build -t $FULL_IMAGE .
                 docker push $FULL_IMAGE
