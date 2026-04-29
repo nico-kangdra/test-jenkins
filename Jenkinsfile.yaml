@@ -15,7 +15,7 @@ pipeline:
         script: |
           env.BRANCH_NAME = "${params.BRANCH_NAME}"
           env.FULL_IMAGE = "${DOCKER_PREFIX}/${APP_NAME}:v${BUILD_NUMBER}"
-          checkout([$class: 'GitSCM', branches: [[name: ${BRANCH_NAME}]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: ${GIT_REPO}]]])
+          checkout([$class: 'GitSCM', branches: [[name: env.BRANCH_NAME]], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: env.GIT_REPO]]])
 
     - stage: "Docker Build and Push"
       steps:
