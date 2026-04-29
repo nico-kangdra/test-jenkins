@@ -13,14 +13,17 @@ pipeline:
     - stage: "PreRequisites"
       steps:
         script: |
-          env.BRANCH_NAME = "${params.BRANCH_NAME}"
-          env.FULL_IMAGE = "${DOCKER_PREFIX}/${APP_NAME}:v${BUILD_NUMBER}"
           checkout([$class: 'GitSCM', 
                     branches: [[name: env.BRANCH_NAME]], 
                     extensions: [[$class: 'WipeWorkspace']], 
                     userRemoteConfigs: [[url: env.GIT_REPO]],
                     quickFilterEnabled: 'true'
                   ])
+          env.BRANCH_NAME = "${params.BRANCH_NAME}"
+          env.FULL_IMAGE = "${DOCKER_PREFIX}/${APP_NAME}:v${BUILD_NUMBER}"
+          env.GIT_COMMIT_ID = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+          currentBuild.displayName = "#${BUILD_NUMBER} - ${env.BRANCH_NAME}"
+          currentBuild.description = "BRANCH: ${env.BRANCH_NAME}\nCOMMIT: ${env.GIT_COMMIT_ID}"
 
     - stage: "Docker Build and Push"
       steps:
