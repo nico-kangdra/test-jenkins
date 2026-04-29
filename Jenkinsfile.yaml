@@ -48,3 +48,4 @@ pipeline:
           sleep 10
           docker rm -f $APP_NAME
         '''
+        cleanWs()
