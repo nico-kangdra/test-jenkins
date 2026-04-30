@@ -1,0 +1,106 @@
+pipeline:
+  agent:
+    label: "esb-api-portal-nonprod"
+
+  parameters:
+    - "gitParameter(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Select the branch to build from', type: 'PT_BRANCH', branchFilter: '.*[/](.*)', sortMode: 'DESCENDING_SMART')"
+    - "choice(name: 'ACTION', choices: ['deploy', 'rollback'], description: 'Choose the action to perform')"
+
+  environment:
+    GIT_APP_REPO: "https://code.cimbniaga.co.id/scm/api/api-access-reporting-service.git"
+    GIT_CONFIG_REPO: "https://code.cimbniaga.co.id/scm/esp/portal-config.git"
+    KUBE_PROJECT: "portal-api-dev"
+    BUILD_ENV: "dev"
+    BITBUCKET_LOGIN: "SH13048X"
+    BITBUCKET_TOKEN: "BBDC-Njc5ODgwMzU5NTI1OuYRM/TcmD4O+4bJFFXM+H8IOTdw"
+    ARTIFACTORY_URL: "docker-dev.artifactory.cimbniaga.co.id:443"
+    ECR_URL: "253490766924.dkr.ecr.ap-southeast-3.amazonaws.com"
+
+  stages:
+    - stage: "Preparation"
+      steps:
+        script: |
+          echo "Config: ${GIT_CONFIG_REPO}"
+          echo "App Repo: ${GIT_APP_REPO}"
+
+          env.BRANCH_NAME = "${params.BRANCH_NAME}"
+          env.ACTION = "${params.ACTION}"
+          env.ARTIFACTORY_IMAGE = "${ARTIFACTORY_URL}/esb/portal/${BUILD_ENV}/${JOB_BASE_NAME}:${BUILD_ID}"
+          env.ECR_IMAGE = "${ECR_URL}/portal/${BUILD_ENV}/${JOB_BASE_NAME}:${BUILD_ID}"
+
+    - stage: "Checkout Config"
+      when:
+        - "${ACTION}" == "deploy"
+      steps:
+        script: |
+          checkout([$class: 'GitSCM', 
+                    extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'portal-config']],
+                    userRemoteConfigs: [[credentialsId: 'buildUser', url: env.GIT_CONFIG_REPO]],
+                    branches: [[name: 'env.BRANCH_NAME']]
+                  ], poll: false)
+
+    - stage: "Checkout App"
+      when:
+        - "${ACTION}" == "deploy"
+      steps:
+        script: |
+          checkout([$class: 'GitSCM', 
+                    userRemoteConfigs: [[credentialsId: 'buildUser', url: env.GIT_APP_REPO]],
+                    branches: [[name: 'env.BRANCH_NAME']]
+                  ], poll: false)
+
+    - stage: "Load Config"
+      when:
+        - "${ACTION}" == "deploy"
+      steps:
+        script: |
+          sh '''
+            cp portal-config/${JOB_BASE_NAME}.env.json env.json
+          '''
+
+    - stage: "Docker Build and Push"
+      when:
+        - "${ACTION}" == "deploy"
+      steps:
+        script: |
+          withCredentials: "[usernamePassword(credentialsId: 'buildUser', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]"
+            script: |
+              sh '''
+                cp /home/ec2-user/seeker-agent-linux-amd64 .
+                echo $PASSWORD | docker login -u $USERNAME --password-stdin $ARTIFACTORY_URL
+
+                echo "Building Image: $JOB_BASE_NAME:$BUILD_ID"
+                docker build --no-cache \
+                            --build-arg BITBUCKET_LOGIN=$BITBUCKET_LOGIN \
+                            --build-arg BITBUCKET_TOKEN=$BITBUCKET_TOKEN \
+                            -t $ARTIFACTORY_IMAGE .
+
+                echo "Pushing Image: $ARTIFACTORY_IMAGE"
+                docker push $ARTIFACTORY_IMAGE
+
+                docker tag $ARTIFACTORY_IMAGE $ECR_IMAGE
+
+                aws ecr get-login-password --region ap-southeast-3 | docker login --username AWS --password-stdin $ECR_URL
+
+                echo "Pushing Image to ECR: $ECR_IMAGE"
+                docker push $ECR_IMAGE
+              '''
+
+    - stage: "Deploy App"
+      steps:
+        script: |
+          sh '''
+            if [$ACTION = "deploy"]; then
+              TAG=$BUILD_ID
+            else
+              TAG=$BRANCH_NAME
+            fi
+
+            cp /home/ec2-user/deployment/template-$BUILD_ENV.yaml ./$JOB_BASE_NAME.yaml
+            sed -i 's|service-name|$JOB_BASE_NAME|g' ./$JOB_BASE_NAME.yaml
+            sed -i 's|tag-version|$TAG|g' ./$JOB_BASE_NAME.yaml
+
+            cat $JOB_BASE_NAME.yaml
+            kubectl apply -f ./$JOB_BASE_NAME.yaml
+            kubectl rollout restart deployment $JOB_BASE_NAME -n $KUBE_PROJECT
+          '''
