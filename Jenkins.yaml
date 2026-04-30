@@ -30,7 +30,7 @@ pipeline:
 
     - stage: "Checkout Config"
       when:
-        - "${ACTION}" == "deploy"
+        - 'expression{params.ACTION == "deploy"}'
       steps:
         script: |
           checkout([$class: 'GitSCM', 
@@ -41,7 +41,7 @@ pipeline:
 
     - stage: "Checkout App"
       when:
-        - "${ACTION}" == "deploy"
+        - 'expression{params.ACTION == "deploy"}'
       steps:
         script: |
           checkout([$class: 'GitSCM', 
@@ -51,7 +51,7 @@ pipeline:
 
     - stage: "Load Config"
       when:
-        - "${ACTION}" == "deploy"
+        - 'expression{params.ACTION == "deploy"}'
       steps:
         script: |
           sh '''
@@ -60,10 +60,10 @@ pipeline:
 
     - stage: "Docker Build and Push"
       when:
-        - "${ACTION}" == "deploy"
+        - 'expression{params.ACTION == "deploy"}'
       steps:
-        script: |
-          withCredentials: "[usernamePassword(credentialsId: 'buildUser', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]"
+        script:
+          - withCredentials: "[usernamePassword(credentialsId: 'buildUser', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]"
             script: |
               sh '''
                 cp /home/ec2-user/seeker-agent-linux-amd64 .
