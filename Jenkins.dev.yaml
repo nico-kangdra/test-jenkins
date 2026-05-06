@@ -30,18 +30,9 @@ pipeline:
       steps:
         script: |
           sh '''
-            mkdir -p $REPORTS_DIR
-            chmod 777 $REPORTS_DIR
-            echo "Files in workspace:"
-            ls -F $WORKSPACE
-            docker run --rm \
-                -v $WORKSPACE:/src \
-                -v $REPORTS_DIR:/reports \
-                opengrep/opengrep scan --config=auto --json-output=/reports/semgrep-report.json
-            
+            opengrep scan > output.txt
             echo "✓ Semgrep scan completed!"
             echo ""
-            ls -l $REPORTS_DIR
             echo "=== SEMGREP REPORT ==="
-            cat $REPORTS_DIR/semgrep-report.json
+            cat output.txt
           '''
