@@ -8,8 +8,6 @@ pipeline:
     GIT_REPO: "https://github.com/nico-kangdra/test-jenkins.git"
     APP_NAME: "go-app"
     DOCKER_PREFIX: "nkangdra"
-    REPORTS_DIR: "${WORKSPACE}/reports"
-    NGINX_PORT: "8080"
 
   stages:
     - stage: "PreRequisites"
@@ -23,6 +21,7 @@ pipeline:
                   ])
           env.BRANCH_NAME = "${params.BRANCH_NAME}"
           env.FULL_IMAGE = "${DOCKER_PREFIX}/${APP_NAME}:v${BUILD_NUMBER}"
+          env.REPORTS_DIR = "${WORKSPACE}/semgrep-reports"
           env.GIT_COMMIT_ID = sh(script: 'git rev-parse --short=7 HEAD', returnStdout: true).trim()
           currentBuild.displayName = "#${BUILD_NUMBER} - ${env.BRANCH_NAME}"
           currentBuild.description = "COMMIT: ${env.GIT_COMMIT_ID}"
@@ -31,35 +30,18 @@ pipeline:
       steps:
         script: |
           sh '''
-            mkdir -p ${REPORTS_DIR}
-            docker run --rm -v ${WORKSPACE}:/src \
-                -v ${REPORTS_DIR}:/reports \
-                returntocorp/semgrep semgrep scan --config=auto --html -o /reports/index.html
+            mkdir -p $REPORTS_DIR
+            chmod 777 $REPORTS_DIR
+            echo "Files in workspace:"
+            ls -F $WORKSPACE
+            docker run --rm \
+                -v $WORKSPACE:/src \
+                -v $REPORTS_DIR:/reports \
+                opengrep/opengrep scan --config=auto --json-output=/reports/semgrep-report.json
             
-            echo "✓ Semgrep scan completed, HTML report generated!"
-          '''
-    
-    - stage: "Serve Report with Nginx"
-      steps:
-        script: |
-          sh '''
-            echo "Starting Nginx container to serve security report..."
-            
-            # Stop any existing nginx container
-            docker stop semgrep-nginx 2>/dev/null || true
-            docker rm semgrep-nginx 2>/dev/null || true
-            
-            # Run nginx container
-            docker run -d \
-              --name semgrep-nginx \
-              -p ${NGINX_PORT}:80 \
-              -v ${REPORTS_DIR}:/usr/share/nginx/html:ro \
-              nginx:latest
-            
-            sleep 2
-            echo "✓ Nginx server is running!"
-            echo "📊 Security report available at: http://localhost:${NGINX_PORT}"
-            echo "📊 Direct JSON report: http://localhost:${NGINX_PORT}/semgrep-report.json"
-            
-            docker ps | grep semgrep-nginx
+            echo "✓ Semgrep scan completed!"
+            echo ""
+            ls -l $REPORTS_DIR
+            echo "=== SEMGREP REPORT ==="
+            cat $REPORTS_DIR/semgrep-report.json
           '''
